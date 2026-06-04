@@ -1,0 +1,33 @@
+# FastAPI核心
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-multipart==0.0.6
+
+# 数据处理
+numpy==1.26.3
+pandas==2.1.4
+
+# HTTP客户端
+requests==2.31.0
+httpx==0.26.0
+aiohttp==3.9.1
+
+# 文本处理
+opencc-python-reimplemented==0.1.7
+jieba==0.42.1
+
+# 异步任务
+python-jose[cryptography]==3.3.0
+python-dateutil==2.8.2
+
+# 开发工具
+python-dotenv==1.0.0
+
+# SSH连接（可选，用于远程文件访问）
+paramiko==3.4.0
+
+# 测试
+pytest==7.4.4
+pytest-asyncio==0.23.3

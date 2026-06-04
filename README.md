@@ -39,10 +39,12 @@
 - **Requests** - HTTP客户端（用于调用embedding API）
 
 ### 前端
-- **React 18+** 或 **Vue 3+** (待确定)
+- **React 18+** - 前端框架
+- **TypeScript** - 类型安全
+- **Vite** - 构建工具
 - **Tailwind CSS** - 样式框架
-- **Monaco Editor** 或类似组件 - 文本标注
-- **Diff组件** - 文本对比展示
+- **React Query** - 数据管理
+- **Axios** - HTTP客户端
 
 ### 存储
 - 文件系统存储标注结果（JSON格式）
@@ -74,40 +76,58 @@ guji-lable/
 
 ## 快速开始
 
+详细启动指南请查看 [docs/QUICKSTART.md](docs/QUICKSTART.md)
+
 ### 环境要求
 
 - Python 3.8+
-- Node.js 16+ (如果使用前端构建)
+- Node.js 16+
 - 网络连接到内网服务器 (172.23.40.162)
 
-### 后端安装
+### 快速启动（Windows）
+
+**方式一：使用启动脚本**
 
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# 或 venv\Scripts\activate  # Windows
-pip install -r requirements.txt
+# 启动后端（双击运行）
+start-backend.bat
+
+# 启动前端（双击运行）
+start-frontend.bat
 ```
 
-### 前端安装
+**方式二：命令行启动**
 
 ```bash
+# 后端
+cd backend
+pip install -r requirements.txt
+python main.py
+
+# 前端
 cd frontend
 npm install
-```
-
-### 运行服务
-
-```bash
-# 启动后端
-cd backend
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# 启动前端开发服务器
-cd frontend
 npm run dev
 ```
+
+### 连接测试
+
+在启动服务前，建议先运行连接测试：
+
+```bash
+python test_connection.py
+```
+
+此脚本将测试：
+- 远程服务器连接
+- Embedding API可用性  
+- 文件路径访问权限
+
+### 访问地址
+
+- 前端界面: http://localhost:5173
+- 后端API: http://localhost:8000
+- API文档: http://localhost:8000/api/docs
 
 ## 标注工作流
 
