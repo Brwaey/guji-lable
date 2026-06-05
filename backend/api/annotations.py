@@ -37,51 +37,6 @@ async def create_annotation(data: AnnotationCreate):
         raise HTTPException(status_code=500, detail=f"创建标注失败: {str(e)}")
 
 
-@router.get("/{annotation_id}", response_model=Annotation)
-async def get_annotation(annotation_id: str):
-    """
-    获取标注详情
-    
-    根据ID获取单个标注的详细信息
-    """
-    annotation = annotation_service.get_annotation(annotation_id)
-    
-    if not annotation:
-        raise HTTPException(status_code=404, detail="标注不存在")
-    
-    return annotation
-
-
-@router.put("/{annotation_id}", response_model=Annotation)
-async def update_annotation(annotation_id: str, data: AnnotationUpdate):
-    """
-    更新标注
-    
-    更新现有标注的内容
-    """
-    annotation = annotation_service.update_annotation(annotation_id, data)
-    
-    if not annotation:
-        raise HTTPException(status_code=404, detail="标注不存在")
-    
-    return annotation
-
-
-@router.delete("/{annotation_id}")
-async def delete_annotation(annotation_id: str):
-    """
-    删除标注
-    
-    删除指定ID的标注
-    """
-    success = annotation_service.delete_annotation(annotation_id)
-    
-    if not success:
-        raise HTTPException(status_code=404, detail="标注不存在")
-    
-    return {"message": "标注已删除", "annotation_id": annotation_id}
-
-
 @router.get("/list", response_model=AnnotationListResponse)
 async def list_annotations(
     file_path: Optional[str] = Query(None, description="文件路径过滤"),
@@ -125,29 +80,6 @@ async def get_statistics(
         raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
 
 
-@router.post("/export")
-async def export_annotations(request: AnnotationExportRequest):
-    """
-    导出标注
-    
-    将标注数据导出为指定格式
-    """
-    try:
-        data = annotation_service.export_annotations(
-            format=request.format,
-            scope=request.scope,
-            file_path=request.file_path
-        )
-        
-        return {
-            "format": request.format,
-            "data": data,
-            "message": "导出成功"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")
-
-
 @router.get("/types")
 async def get_annotation_types():
     """
@@ -185,3 +117,72 @@ async def get_annotation_statuses():
     ]
     
     return {"statuses": statuses}
+
+
+@router.post("/export")
+async def export_annotations(request: AnnotationExportRequest):
+    """
+    导出标注
+    
+    将标注数据导出为指定格式
+    """
+    try:
+        data = annotation_service.export_annotations(
+            format=request.format,
+            scope=request.scope,
+            file_path=request.file_path
+        )
+        
+        return {
+            "format": request.format,
+            "data": data,
+            "message": "导出成功"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")
+
+
+# 动态路由放在最后，避免与静态路由冲突
+@router.get("/{annotation_id}", response_model=Annotation)
+async def get_annotation(annotation_id: str):
+    """
+    获取标注详情
+    
+    根据ID获取单个标注的详细信息
+    """
+    annotation = annotation_service.get_annotation(annotation_id)
+    
+    if not annotation:
+        raise HTTPException(status_code=404, detail="标注不存在")
+    
+    return annotation
+
+
+@router.put("/{annotation_id}", response_model=Annotation)
+async def update_annotation(annotation_id: str, data: AnnotationUpdate):
+    """
+    更新标注
+    
+    更新现有标注的内容
+    """
+    annotation = annotation_service.update_annotation(annotation_id, data)
+    
+    if not annotation:
+        raise HTTPException(status_code=404, detail="标注不存在")
+    
+    return annotation
+
+
+@router.delete("/{annotation_id}")
+async def delete_annotation(annotation_id: str):
+    """
+    删除标注
+    
+    删除指定ID的标注
+    """
+    success = annotation_service.delete_annotation(annotation_id)
+    
+    if not success:
+        raise HTTPException(status_code=404, detail="标注不存在")
+    
+    return {"message": "标注已删除", "annotation_id": annotation_id}
