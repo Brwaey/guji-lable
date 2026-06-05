@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { FiEdit3, FiCheck, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
+import { FiEdit3, FiCheck, FiChevronLeft, FiChevronRight, FiInfo } from 'react-icons/fi'
 import FileBrowser from '@/components/FileBrowser/FileBrowser'
 import QuickAnnotationPanel from '@/components/Annotation/QuickAnnotationPanel'
 import { fileApi } from '@/services/fileApi'
@@ -30,7 +30,7 @@ export default function ComparePage() {
   
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(50) // 每页50个文本块
+  const [pageSize, setPageSize] = useState(50)
 
   // 获取基础路径
   const { data: basePaths } = useQuery({
@@ -91,7 +91,6 @@ export default function ComparePage() {
 
   // 打开批注面板
   const handleOpenAnnotation = (chunk: TextChunk) => {
-    // 使用 chunk_index + chapter 作为唯一标识
     const chunkKey = `${chunk.chunk_index}-${chunk.chapter}`
     setSelectedChunkKey(chunkKey)
     setShowAnnotationPanel(true)
@@ -100,19 +99,21 @@ export default function ComparePage() {
   // 保存批注
   const handleSaveAnnotation = async (annotation: any) => {
     try {
-      await annotationApi.create(annotation)
+      const response = await annotationApi.create(annotation)
       
       // 更新本地批注列表 - 使用复合key
       const chunkKey = `${annotation.chunk_index}-${annotation.chapter}`
       setChunkAnnotations(prev => {
         const newMap = new Map(prev)
         const annotations = newMap.get(chunkKey) || []
-        newMap.set(chunkKey, [...annotations, annotation])
+        newMap.set(chunkKey, [...annotations, response])
         return newMap
       })
       
       toast.success('批注保存成功！')
+      return response
     } catch (error: any) {
+      toast.error(`保存失败: ${error.response?.data?.detail || error.message}`)
       throw error
     }
   }
@@ -222,7 +223,7 @@ export default function ComparePage() {
       {/* 主内容区 */}
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧：计算结果 */}
-        <div className={`flex-1 overflow-hidden ${showAnnotationPanel ? 'pr-0' : ''}`}>
+        <div className={`flex-1 overflow-hidden ${showAnnotationPanel ? '' : ''}`}>
           {result && (
             <div className="h-full flex flex-col bg-gray-50 p-4">
               {/* 颜色图例 */}
@@ -279,6 +280,20 @@ export default function ComparePage() {
                   </p>
                 </div>
               </div>
+
+              {/* 当前计算的文件提示 */}
+              {ocrFile && refFile && (
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-center">
+                    <FiInfo className="w-4 h-4 text-blue-600 mr-2" />
+                    <span className="text-sm text-blue-800 font-medium">当前分析文件：</span>
+                  </div>
+                  <div className="mt-2 text-xs text-blue-700 space-y-1">
+                    <div><span className="font-medium">OCR：</span>{ocrFile.split('/').pop()}</div>
+                    <div><span className="font-medium">参考：</span>{refFile.split('/').pop()}</div>
+                  </div>
+                </div>
+              )}
 
               {/* 文本块列表 */}
               <div className="flex-1 overflow-hidden flex flex-col">
@@ -368,7 +383,7 @@ export default function ComparePage() {
                     
                     return (
                       <div
-                        key={chunk.chunk_index}
+                        key={chunkKey}
                         className={`border-2 ${borderColor} ${bgColor} rounded-lg p-3 transition-all cursor-pointer hover:shadow-md`}
                         onClick={() => handleOpenAnnotation(chunk)}
                       >
@@ -415,7 +430,7 @@ export default function ComparePage() {
 
         {/* 右侧：批注面板 */}
         {showAnnotationPanel && selectedChunk && (
-          <div className="w-96 flex-shrink-0 border-l bg-white">
+          <div className="w-96 flex-shrink-0 border-l bg-white flex flex-col">
             <QuickAnnotationPanel
               chunk={selectedChunk}
               ocrFile={ocrFile}
@@ -426,7 +441,7 @@ export default function ComparePage() {
             />
             
             {/* 快捷导航 */}
-            <div className="border-t p-2 flex items-center justify-between bg-gray-50">
+            <div className="border-t p-2 flex items-center justify-between bg-gray-50 flex-shrink-0">
               <button
                 onClick={handlePrevChunk}
                 disabled={!selectedChunkKey || result!.chunks.findIndex(c => 
