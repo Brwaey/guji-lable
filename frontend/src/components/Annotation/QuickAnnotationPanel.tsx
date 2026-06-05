@@ -48,7 +48,7 @@ export default function QuickAnnotationPanel({
     const selection = window.getSelection()
     if (selection && selection.toString()) {
       const selected = selection.toString()
-      const ocrTextElement = document.getElementById(`ocr-text-${chunk.chunk_index}`)
+      const ocrTextElement = document.getElementById(`ocr-text-${chunk.chunk_index}-${chunk.chapter}`)
       if (ocrTextElement) {
         const textContent = ocrTextElement.textContent || ''
         const startIndex = textContent.indexOf(selected)
@@ -67,7 +67,7 @@ export default function QuickAnnotationPanel({
     const selection = window.getSelection()
     if (selection && selection.toString()) {
       const selected = selection.toString()
-      const refTextElement = document.getElementById(`ref-text-${chunk.chunk_index}`)
+      const refTextElement = document.getElementById(`ref-text-${chunk.chunk_index}-${chunk.chapter}`)
       if (refTextElement) {
         const textContent = refTextElement.textContent || ''
         const startIndex = textContent.indexOf(selected)
@@ -142,7 +142,7 @@ export default function QuickAnnotationPanel({
   return (
     <div className="bg-white border-l-2 border-primary-500 h-full flex flex-col">
       {/* 头部 */}
-      <div className="bg-primary-600 text-white px-4 py-3 flex items-center justify-between">
+      <div className="bg-primary-600 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center">
           <FiMessageCircle className="w-5 h-5 mr-2" />
           <span className="font-semibold">快速批注</span>
@@ -152,7 +152,7 @@ export default function QuickAnnotationPanel({
         </button>
       </div>
 
-      {/* 内容区 */}
+      {/* 内容区 - 可滚动 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* 文本块信息 */}
         <div className="bg-gray-50 rounded p-3">
@@ -177,7 +177,7 @@ export default function QuickAnnotationPanel({
               <button
                 key={type.code}
                 onClick={() => setAnnotationType(type.code)}
-                className={`p-2 border rounded text-left transition-colors text-sm ${
+                className={`p-2 border-2 rounded text-left transition-colors text-sm ${
                   annotationType === type.code
                     ? 'border-primary-500 bg-primary-50 text-primary-700'
                     : 'border-gray-200 hover:border-gray-300'
@@ -190,7 +190,7 @@ export default function QuickAnnotationPanel({
           </div>
         </div>
 
-        {/* 文本对比展示（始终显示双方） */}
+        {/* 文本对比展示 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             文本对比
@@ -201,24 +201,28 @@ export default function QuickAnnotationPanel({
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-gray-600">OCR识别结果</span>
                 {annotationType !== 'missing' && (
-                  <span className="text-xs text-primary-600">← 点击选择</span>
+                  <span className="text-xs text-primary-600 font-medium">← 拖动选择</span>
                 )}
               </div>
               <div
-                id={`ocr-text-${chunk.chunk_index}`}
-                className={`p-3 border rounded min-h-[120px] text-sm select-text cursor-text ${
+                id={`ocr-text-${chunk.chunk_index}-${chunk.chapter}`}
+                className={`p-3 border-2 rounded min-h-[120px] text-sm ${
                   annotationType === 'missing' 
-                    ? 'bg-gray-100 border-gray-300 text-gray-400' 
-                    : 'bg-gray-50 border-gray-300 hover:border-primary-400'
+                    ? 'bg-gray-100 border-gray-200 text-gray-400' 
+                    : 'bg-white border-primary-300 hover:border-primary-500'
                 }`}
                 onMouseUp={handleOcrTextSelection}
-                style={{ userSelect: 'text' }}
+                style={{ 
+                  userSelect: annotationType === 'missing' ? 'none' : 'text',
+                  cursor: annotationType === 'missing' ? 'default' : 'text'
+                }}
               >
                 {chunk.ocr_text}
               </div>
               {ocrSelection && annotationType !== 'missing' && (
-                <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                  已选择: <strong className="text-yellow-800">{ocrSelection.text}</strong>
+                <div className="mt-2 p-2 bg-yellow-50 border-2 border-yellow-300 rounded text-xs">
+                  <span className="font-medium text-yellow-800">✓ 已选择：</span>
+                  <span className="text-yellow-900 font-semibold">{ocrSelection.text}</span>
                 </div>
               )}
             </div>
@@ -228,24 +232,28 @@ export default function QuickAnnotationPanel({
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-gray-600">参考文本（正确答案）</span>
                 {annotationType === 'missing' && (
-                  <span className="text-xs text-primary-600">← 点击选择</span>
+                  <span className="text-xs text-primary-600 font-medium">← 拖动选择</span>
                 )}
               </div>
               <div
-                id={`ref-text-${chunk.chunk_index}`}
-                className={`p-3 border rounded min-h-[120px] text-sm select-text cursor-text ${
+                id={`ref-text-${chunk.chunk_index}-${chunk.chapter}`}
+                className={`p-3 border-2 rounded min-h-[120px] text-sm ${
                   annotationType === 'missing' 
-                    ? 'bg-green-50 border-green-300 hover:border-green-400' 
-                    : 'bg-gray-50 border-gray-300'
+                    ? 'bg-green-50 border-green-300 hover:border-green-500' 
+                    : 'bg-gray-50 border-gray-200'
                 }`}
                 onMouseUp={handleRefTextSelection}
-                style={{ userSelect: 'text' }}
+                style={{ 
+                  userSelect: annotationType === 'missing' ? 'text' : 'none',
+                  cursor: annotationType === 'missing' ? 'text' : 'default'
+                }}
               >
                 {chunk.ref_text || '无匹配'}
               </div>
               {refSelection && annotationType === 'missing' && (
-                <div className="mt-1 p-2 bg-green-100 border border-green-200 rounded text-xs">
-                  已选择: <strong className="text-green-800">{refSelection.text}</strong>
+                <div className="mt-2 p-2 bg-green-100 border-2 border-green-300 rounded text-xs">
+                  <span className="font-medium text-green-800">✓ 已选择：</span>
+                  <span className="text-green-900 font-semibold">{refSelection.text}</span>
                 </div>
               )}
             </div>
@@ -312,10 +320,10 @@ export default function QuickAnnotationPanel({
         )}
       </div>
 
-      {/* 底部按钮 */}
-      <div className="border-t p-4 space-y-2">
+      {/* 底部按钮 - 固定在视口底部 */}
+      <div className="border-t p-4 space-y-2 bg-white flex-shrink-0">
         {saveSuccess && (
-          <div className="bg-green-50 border border-green-200 rounded p-2 text-center text-sm text-green-700 flex items-center justify-center">
+          <div className="bg-green-50 border-2 border-green-300 rounded p-2 text-center text-sm text-green-700 flex items-center justify-center">
             <FiCheck className="w-4 h-4 mr-2" />
             保存成功！继续批注
           </div>
@@ -324,7 +332,7 @@ export default function QuickAnnotationPanel({
         <button
           onClick={handleSubmit}
           disabled={!canSave() || isSaving}
-          className={`w-full py-2 rounded font-medium transition-colors ${
+          className={`w-full py-3 rounded-lg font-medium transition-colors ${
             !canSave()
               ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
               : isSaving

@@ -24,9 +24,9 @@ export default function ComparePage() {
   const [result, setResult] = useState<SimilarityResult | null>(null)
   
   // 批注相关状态
-  const [selectedChunkIndex, setSelectedChunkIndex] = useState<number | null>(null)
+  const [selectedChunkKey, setSelectedChunkKey] = useState<string | null>(null)
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(false)
-  const [chunkAnnotations, setChunkAnnotations] = useState<Map<number, any[]>>(new Map())
+  const [chunkAnnotations, setChunkAnnotations] = useState<Map<string, any[]>>(new Map())
   
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
@@ -73,7 +73,7 @@ export default function ComparePage() {
 
     setIsComputing(true)
     setResult(null)
-    setSelectedChunkIndex(null)
+    setSelectedChunkKey(null)
     setShowAnnotationPanel(false)
 
     try {
@@ -90,8 +90,10 @@ export default function ComparePage() {
   }
 
   // 打开批注面板
-  const handleOpenAnnotation = (chunkIndex: number) => {
-    setSelectedChunkIndex(chunkIndex)
+  const handleOpenAnnotation = (chunk: TextChunk) => {
+    // 使用 chunk_index + chapter 作为唯一标识
+    const chunkKey = `${chunk.chunk_index}-${chunk.chapter}`
+    setSelectedChunkKey(chunkKey)
     setShowAnnotationPanel(true)
   }
 
@@ -100,12 +102,12 @@ export default function ComparePage() {
     try {
       await annotationApi.create(annotation)
       
-      // 更新本地批注列表
-      const chunkIndex = annotation.chunk_index
+      // 更新本地批注列表 - 使用复合key
+      const chunkKey = `${annotation.chunk_index}-${annotation.chapter}`
       setChunkAnnotations(prev => {
         const newMap = new Map(prev)
-        const annotations = newMap.get(chunkIndex) || []
-        newMap.set(chunkIndex, [...annotations, annotation])
+        const annotations = newMap.get(chunkKey) || []
+        newMap.set(chunkKey, [...annotations, annotation])
         return newMap
       })
       
@@ -122,15 +124,27 @@ export default function ComparePage() {
 
   // 切换到下一个文本块
   const handleNextChunk = () => {
-    if (result && selectedChunkIndex !== null && selectedChunkIndex < result.chunks.length - 1) {
-      setSelectedChunkIndex(selectedChunkIndex + 1)
+    if (result && selectedChunkKey !== null) {
+      const currentIndex = result.chunks.findIndex(c => 
+        `${c.chunk_index}-${c.chapter}` === selectedChunkKey
+      )
+      if (currentIndex < result.chunks.length - 1) {
+        const nextChunk = result.chunks[currentIndex + 1]
+        setSelectedChunkKey(`${nextChunk.chunk_index}-${nextChunk.chapter}`)
+      }
     }
   }
 
   // 切换到上一个文本块
   const handlePrevChunk = () => {
-    if (selectedChunkIndex !== null && selectedChunkIndex > 0) {
-      setSelectedChunkIndex(selectedChunkIndex - 1)
+    if (result && selectedChunkKey !== null) {
+      const currentIndex = result.chunks.findIndex(c => 
+        `${c.chunk_index}-${c.chapter}` === selectedChunkKey
+      )
+      if (currentIndex > 0) {
+        const prevChunk = result.chunks[currentIndex - 1]
+        setSelectedChunkKey(`${prevChunk.chunk_index}-${prevChunk.chapter}`)
+      }
     }
   }
 
@@ -148,9 +162,9 @@ export default function ComparePage() {
   }, [result, pageSize])
 
   const selectedChunk = useMemo(() => {
-    if (!result || selectedChunkIndex === null) return null
-    return result.chunks[selectedChunkIndex]
-  }, [result, selectedChunkIndex])
+    if (!result || selectedChunkKey === null) return null
+    return result.chunks.find(c => `${c.chunk_index}-${c.chapter}` === selectedChunkKey)
+  }, [result, selectedChunkKey])
 
   return (
     <div className="h-full flex flex-col">
@@ -326,8 +340,10 @@ export default function ComparePage() {
                 {/* 文本块网格 */}
                 <div className="flex-1 overflow-y-auto space-y-2 pr-2">
                   {paginatedChunks.map((chunk) => {
-                    const hasAnnotation = chunkAnnotations.has(chunk.chunk_index)
-                    const isSelected = selectedChunkIndex === chunk.chunk_index
+                    const chunkKey = `${chunk.chunk_index}-${chunk.chapter}`
+                    const annotations = chunkAnnotations.get(chunkKey) || []
+                    const hasAnnotation = annotations.length > 0
+                    const isSelected = selectedChunkKey === chunkKey
                     
                     // 简化颜色逻辑：只显示边框颜色，背景统一
                     let borderColor = 'border-gray-200'
@@ -354,7 +370,7 @@ export default function ComparePage() {
                       <div
                         key={chunk.chunk_index}
                         className={`border-2 ${borderColor} ${bgColor} rounded-lg p-3 transition-all cursor-pointer hover:shadow-md`}
-                        onClick={() => handleOpenAnnotation(chunk.chunk_index)}
+                        onClick={() => handleOpenAnnotation(chunk)}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-medium text-gray-600">
@@ -362,9 +378,9 @@ export default function ComparePage() {
                           </span>
                           <div className="flex items-center space-x-2">
                             {hasAnnotation && (
-                              <span className="flex items-center px-2 py-1 bg-blue-500 text-white rounded text-xs">
+                              <span className="flex items-center px-2 py-1 bg-blue-500 text-white rounded text-xs font-medium">
                                 <FiCheck className="w-3 h-3 mr-1" />
-                                已批注
+                                {annotations.length}条批注
                               </span>
                             )}
                             <span className={`text-sm font-bold ${
@@ -406,25 +422,32 @@ export default function ComparePage() {
               refFile={refFile}
               onSave={handleSaveAnnotation}
               onClose={handleCloseAnnotation}
-              existingAnnotations={chunkAnnotations.get(selectedChunk.chunk_index) || []}
+              existingAnnotations={chunkAnnotations.get(selectedChunkKey || '') || []}
             />
             
             {/* 快捷导航 */}
             <div className="border-t p-2 flex items-center justify-between bg-gray-50">
               <button
                 onClick={handlePrevChunk}
-                disabled={selectedChunkIndex === 0}
+                disabled={!selectedChunkKey || result!.chunks.findIndex(c => 
+                  `${c.chunk_index}-${c.chapter}` === selectedChunkKey
+                ) === 0}
                 className="flex items-center px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
               >
                 <FiChevronLeft className="w-4 h-4 mr-1" />
                 上一块
               </button>
               <span className="text-xs text-gray-500">
-                {selectedChunkIndex! + 1} / {result?.total_chunks}
+                {selectedChunkKey ? 
+                  `${result!.chunks.findIndex(c => `${c.chunk_index}-${c.chapter}` === selectedChunkKey) + 1} / ${result!.total_chunks}` :
+                  '-'
+                }
               </span>
               <button
                 onClick={handleNextChunk}
-                disabled={selectedChunkIndex === result!.chunks.length - 1}
+                disabled={!selectedChunkKey || result!.chunks.findIndex(c => 
+                  `${c.chunk_index}-${c.chapter}` === selectedChunkKey
+                ) === result!.chunks.length - 1}
                 className="flex items-center px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
               >
                 下一块
