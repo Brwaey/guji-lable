@@ -211,6 +211,37 @@ export default function ComparePage() {
         <div className={`flex-1 overflow-hidden ${showAnnotationPanel ? 'pr-0' : ''}`}>
           {result && (
             <div className="h-full flex flex-col bg-gray-50 p-4">
+              {/* 颜色图例 */}
+              <div className="bg-white rounded-lg p-3 shadow mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-6 text-sm">
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded mr-2"></div>
+                      <span className="text-gray-700">高质量 (≥85%)</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-yellow-100 border-2 border-yellow-300 rounded mr-2"></div>
+                      <span className="text-gray-700">中等质量 (70-85%)</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-red-100 border-2 border-red-300 rounded mr-2"></div>
+                      <span className="text-gray-700">低质量 (&lt;70%)</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-blue-100 border-2 border-blue-400 rounded mr-2"></div>
+                      <span className="text-gray-700">已批注</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 bg-primary-50 border-2 border-primary-500 rounded mr-2"></div>
+                      <span className="text-gray-700">当前选中</span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    点击文本块进行批注
+                  </div>
+                </div>
+              </div>
+
               {/* 整体统计 */}
               <div className="grid grid-cols-4 gap-4 mb-4">
                 <div className="bg-white rounded-lg p-4 shadow">
@@ -298,20 +329,31 @@ export default function ComparePage() {
                     const hasAnnotation = chunkAnnotations.has(chunk.chunk_index)
                     const isSelected = selectedChunkIndex === chunk.chunk_index
                     
+                    // 简化颜色逻辑：只显示边框颜色，背景统一
+                    let borderColor = 'border-gray-200'
+                    let bgColor = 'bg-white'
+                    
+                    if (isSelected) {
+                      borderColor = 'border-primary-500 border-2'
+                      bgColor = 'bg-primary-50'
+                    } else if (hasAnnotation) {
+                      borderColor = 'border-blue-400'
+                      bgColor = 'bg-blue-50'
+                    } else if (chunk.similarity >= 0.85) {
+                      borderColor = 'border-green-300'
+                      bgColor = 'bg-white'
+                    } else if (chunk.similarity >= 0.7) {
+                      borderColor = 'border-yellow-300'
+                      bgColor = 'bg-white'
+                    } else {
+                      borderColor = 'border-red-300'
+                      bgColor = 'bg-white'
+                    }
+                    
                     return (
                       <div
                         key={chunk.chunk_index}
-                        className={`border rounded-lg p-3 transition-all cursor-pointer ${
-                          isSelected
-                            ? 'border-primary-500 border-2 bg-primary-50'
-                            : hasAnnotation
-                            ? 'border-blue-400 bg-blue-50'
-                            : chunk.similarity >= 0.85
-                            ? 'bg-sim-excellent'
-                            : chunk.similarity >= 0.7
-                            ? 'bg-sim-medium'
-                            : 'bg-sim-poor'
-                        }`}
+                        className={`border-2 ${borderColor} ${bgColor} rounded-lg p-3 transition-all cursor-pointer hover:shadow-md`}
                         onClick={() => handleOpenAnnotation(chunk.chunk_index)}
                       >
                         <div className="flex items-center justify-between mb-2">
@@ -325,17 +367,21 @@ export default function ComparePage() {
                                 已批注
                               </span>
                             )}
-                            <span className="text-sm font-bold">
+                            <span className={`text-sm font-bold ${
+                              chunk.similarity >= 0.85 ? 'text-green-600' :
+                              chunk.similarity >= 0.7 ? 'text-yellow-600' :
+                              'text-red-600'
+                            }`}>
                               {(chunk.similarity * 100).toFixed(1)}%
                             </span>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="bg-white bg-opacity-60 rounded p-2">
+                          <div className="bg-gray-50 rounded p-2">
                             <p className="font-medium text-gray-700 mb-1">OCR:</p>
                             <p className="text-gray-900 line-clamp-2">{chunk.ocr_text}</p>
                           </div>
-                          <div className="bg-white bg-opacity-60 rounded p-2">
+                          <div className="bg-gray-50 rounded p-2">
                             <p className="font-medium text-gray-700 mb-1">参考:</p>
                             <p className="text-gray-900 line-clamp-2">
                               {chunk.ref_text || '无匹配'}

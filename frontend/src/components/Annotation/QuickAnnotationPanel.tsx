@@ -190,62 +190,67 @@ export default function QuickAnnotationPanel({
           </div>
         </div>
 
-        {/* 提示信息 */}
-        <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
-          {annotationType === 'missing' ? (
-            <>
-              <p className="font-medium text-blue-800">请在参考文本中选择缺失的内容</p>
-              <p className="text-blue-600 text-xs mt-1">OCR识别结果中遗漏的部分</p>
-            </>
-          ) : (
-            <>
-              <p className="font-medium text-blue-800">请在OCR文本中选择问题区域</p>
-              <p className="text-blue-600 text-xs mt-1">用鼠标拖动选择需要标注的文本</p>
-            </>
-          )}
+        {/* 文本对比展示（始终显示双方） */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            文本对比
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {/* OCR文本 */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-gray-600">OCR识别结果</span>
+                {annotationType !== 'missing' && (
+                  <span className="text-xs text-primary-600">← 点击选择</span>
+                )}
+              </div>
+              <div
+                id={`ocr-text-${chunk.chunk_index}`}
+                className={`p-3 border rounded min-h-[120px] text-sm select-text cursor-text ${
+                  annotationType === 'missing' 
+                    ? 'bg-gray-100 border-gray-300 text-gray-400' 
+                    : 'bg-gray-50 border-gray-300 hover:border-primary-400'
+                }`}
+                onMouseUp={handleOcrTextSelection}
+                style={{ userSelect: 'text' }}
+              >
+                {chunk.ocr_text}
+              </div>
+              {ocrSelection && annotationType !== 'missing' && (
+                <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                  已选择: <strong className="text-yellow-800">{ocrSelection.text}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* 参考文本 */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-gray-600">参考文本（正确答案）</span>
+                {annotationType === 'missing' && (
+                  <span className="text-xs text-primary-600">← 点击选择</span>
+                )}
+              </div>
+              <div
+                id={`ref-text-${chunk.chunk_index}`}
+                className={`p-3 border rounded min-h-[120px] text-sm select-text cursor-text ${
+                  annotationType === 'missing' 
+                    ? 'bg-green-50 border-green-300 hover:border-green-400' 
+                    : 'bg-gray-50 border-gray-300'
+                }`}
+                onMouseUp={handleRefTextSelection}
+                style={{ userSelect: 'text' }}
+              >
+                {chunk.ref_text || '无匹配'}
+              </div>
+              {refSelection && annotationType === 'missing' && (
+                <div className="mt-1 p-2 bg-green-100 border border-green-200 rounded text-xs">
+                  已选择: <strong className="text-green-800">{refSelection.text}</strong>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-
-        {/* OCR文本选择区 */}
-        {annotationType !== 'missing' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              OCR识别结果
-            </label>
-            <div
-              id={`ocr-text-${chunk.chunk_index}`}
-              className="p-3 bg-gray-50 border border-gray-300 rounded min-h-[100px] text-sm select-text cursor-text"
-              onMouseUp={handleOcrTextSelection}
-            >
-              {chunk.ocr_text}
-            </div>
-            {ocrSelection && (
-              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
-                已选择: <strong className="text-yellow-800">{ocrSelection.text}</strong>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 参考文本选择区（缺失内容时显示） */}
-        {(annotationType === 'missing' || annotationType === 'other') && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              参考文本
-            </label>
-            <div
-              id={`ref-text-${chunk.chunk_index}`}
-              className="p-3 bg-green-50 border border-green-300 rounded min-h-[100px] text-sm select-text cursor-text"
-              onMouseUp={handleRefTextSelection}
-            >
-              {chunk.ref_text || '无匹配'}
-            </div>
-            {refSelection && (
-              <div className="mt-2 p-2 bg-green-100 border border-green-200 rounded text-sm">
-                已选择: <strong className="text-green-800">{refSelection.text}</strong>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* 修正建议 */}
         <div>
