@@ -4,6 +4,7 @@ import MainLayout from './components/Layout/MainLayout'
 import HomePage from './pages/HomePage'
 import ComparePage from './pages/ComparePage'
 import AnnotationPage from './pages/AnnotationPage'
+import AnnotationManagePage from './pages/AnnotationManagePage'
 import StatsPage from './pages/StatsPage'
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/compare" element={<ComparePage />} />
           <Route path="/annotations" element={<AnnotationPage />} />
+          <Route path="/annotations/manage" element={<AnnotationManagePage />} />
           <Route path="/stats" element={<StatsPage />} />
         </Routes>
       </MainLayout>
@@ -21,7 +23,7 @@ function App() {
         position="top-right"
         toastOptions={{
           duration: 3000,
-          style: {
+          style={{
             background: '#363636',
             color: '#fff',
           },
