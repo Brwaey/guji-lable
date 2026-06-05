@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { FiEdit3 } from 'react-icons/fi'
 import FileBrowser from '@/components/FileBrowser/FileBrowser'
+import AnnotationEditor from '@/components/Annotation/AnnotationEditor'
 import { fileApi } from '@/services/fileApi'
 import { similarityApi, SimilarityResult, TaskStatus } from '@/services/similarityApi'
+import { annotationApi, AnnotationCreate } from '@/services/annotationApi'
 import toast from 'react-hot-toast'
+
+interface TextChunk {
+  chunk_index: number
+  chapter: string
+  ocr_text: string
+  ref_text?: string
+  similarity: number
+}
 
 export default function ComparePage() {
   const [ocrFile, setOcrFile] = useState<string>('')
@@ -11,6 +22,8 @@ export default function ComparePage() {
   const [taskId, setTaskId] = useState<string>('')
   const [isComputing, setIsComputing] = useState(false)
   const [result, setResult] = useState<SimilarityResult | null>(null)
+  const [selectedChunk, setSelectedChunk] = useState<TextChunk | null>(null)
+  const [showAnnotationEditor, setShowAnnotationEditor] = useState(false)
 
   // 获取基础路径
   const { data: basePaths } = useQuery({
@@ -66,6 +79,24 @@ export default function ComparePage() {
     } catch (error: any) {
       setIsComputing(false)
       toast.error(`启动失败: ${error.response?.data?.detail || error.message}`)
+    }
+  }
+
+  // 打开批注编辑器
+  const handleOpenAnnotation = (chunk: TextChunk) => {
+    setSelectedChunk(chunk)
+    setShowAnnotationEditor(true)
+  }
+
+  // 保存批注
+  const handleSaveAnnotation = async (annotation: AnnotationCreate) => {
+    try {
+      await annotationApi.create(annotation)
+      toast.success('批注保存成功！')
+      setShowAnnotationEditor(false)
+      setSelectedChunk(null)
+    } catch (error: any) {
+      toast.error(`保存失败: ${error.response?.data?.detail || error.message}`)
     }
   }
 
@@ -231,9 +262,19 @@ export default function ComparePage() {
                     <span className="text-xs font-medium text-gray-600">
                       块 #{chunk.chunk_index} | {chunk.chapter}
                     </span>
-                    <span className="text-sm font-bold">
-                      {(chunk.similarity * 100).toFixed(1)}%
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-bold">
+                        {(chunk.similarity * 100).toFixed(1)}%
+                      </span>
+                      <button
+                        onClick={() => handleOpenAnnotation(chunk)}
+                        className="flex items-center px-2 py-1 bg-white bg-opacity-50 hover:bg-opacity-80 rounded text-xs font-medium text-gray-700 transition-colors"
+                        title="添加批注"
+                      >
+                        <FiEdit3 className="w-3 h-3 mr-1" />
+                        批注
+                      </button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="bg-white bg-opacity-50 rounded p-2">
@@ -252,6 +293,20 @@ export default function ComparePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 批注编辑器弹窗 */}
+      {showAnnotationEditor && selectedChunk && (
+        <AnnotationEditor
+          chunk={selectedChunk}
+          ocrFile={ocrFile}
+          refFile={refFile}
+          onSave={handleSaveAnnotation}
+          onCancel={() => {
+            setShowAnnotationEditor(false)
+            setSelectedChunk(null)
+          }}
+        />
       )}
     </div>
   )

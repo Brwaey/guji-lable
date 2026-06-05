@@ -158,6 +158,10 @@ class AnnotationCreate(BaseModel):
     ocr_text: Optional[str] = None
     ref_text: Optional[str] = None
     similarity: Optional[float] = None
+    # PDF页码映射（新增）
+    pdf_file: Optional[str] = None
+    pdf_page: Optional[int] = None
+    pdf_position: Optional[Dict[str, float]] = None  # {x, y, width, height}
 
 
 class AnnotationUpdate(BaseModel):
@@ -191,6 +195,10 @@ class Annotation(BaseModel):
     status: AnnotationStatus = AnnotationStatus.DRAFT
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    # PDF页码映射（新增）
+    pdf_file: Optional[str] = None
+    pdf_page: Optional[int] = None
+    pdf_position: Optional[Dict[str, float]] = None
 
 
 class AnnotationListResponse(BaseModel):

@@ -26,6 +26,7 @@ from models.schemas import (
 )
 from utils.text_processor import TextProcessor
 from utils.embedding_client import EmbeddingClient
+from utils.text_aligner import TextAligner, ChunkData
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,10 @@ class SimilarityService:
             batch_size=settings.EMBEDDING_BATCH_SIZE,
             timeout=settings.EMBEDDING_TIMEOUT,
             max_retries=settings.EMBEDDING_MAX_RETRIES
+        )
+        self.text_aligner = TextAligner(
+            similarity_threshold=0.3,
+            position_tolerance=0.15
         )
         
         # 缓存目录
@@ -181,19 +186,46 @@ class SimilarityService:
             
             # 对齐和计算相似度
             task.message = "正在计算相似度..."
-            aligned_pairs = self._align_chunks(ocr_chunks, ref_chunks, ocr_embeddings, ref_embeddings)
+            
+            # 转换为ChunkData格式
+            ocr_chunk_data = [
+                ChunkData(
+                    text=c.text,
+                    start_pos=c.start_pos,
+                    end_pos=c.end_pos,
+                    chapter=c.chapter,
+                    index=c.index,
+                    embedding=ocr_embeddings[i] if i < len(ocr_embeddings) else None
+                )
+                for i, c in enumerate(ocr_chunks)
+            ]
+            
+            ref_chunk_data = [
+                ChunkData(
+                    text=c.text,
+                    start_pos=c.start_pos,
+                    end_pos=c.end_pos,
+                    chapter=c.chapter,
+                    index=c.index,
+                    embedding=ref_embeddings[i] if i < len(ref_embeddings) else None
+                )
+                for i, c in enumerate(ref_chunks)
+            ]
+            
+            # 使用新的对齐器
+            aligned_pairs = self.text_aligner.align_chunks(ocr_chunk_data, ref_chunk_data)
             
             # 计算相似度
             chunk_results = []
             chapter_sims = {}
             
-            for ocr_chunk, ref_chunk, ocr_emb, ref_emb in aligned_pairs:
+            for ocr_chunk, ref_chunk in aligned_pairs:
                 if not ocr_chunk.text:
                     continue
                 
                 similarity = 0.0
-                if ocr_emb and ref_emb:
-                    similarity = self.embedding_client.cosine_similarity(ocr_emb, ref_emb)
+                if ocr_chunk.embedding and ref_chunk and ref_chunk.embedding:
+                    similarity = self.embedding_client.cosine_similarity(ocr_chunk.embedding, ref_chunk.embedding)
                 
                 chunk_result = TextChunk(
                     chunk_index=ocr_chunk.index,
@@ -345,56 +377,3 @@ class SimilarityService:
         self._save_embeddings_cache(file_path, texts, embeddings)
         
         return embeddings
-    
-    def _align_chunks(self, chunks1, chunks2, embeddings1, embeddings2):
-        """对齐文本块"""
-        aligned = []
-        
-        if not chunks1 or not chunks2:
-            for chunk in chunks1:
-                aligned.append((chunk, None, None, None))
-            for chunk in chunks2:
-                aligned.append((type('obj', (object,), {'text': ''})(), chunk, None, None))
-            return aligned
-        
-        # 简单策略：按章节分组后对齐
-        from collections import defaultdict
-        
-        chunks_by_chapter1 = defaultdict(list)
-        chunks_by_chapter2 = defaultdict(list)
-        
-        for i, chunk in enumerate(chunks1):
-            chunks_by_chapter1[chunk.chapter].append((i, chunk, embeddings1[i] if i < len(embeddings1) else None))
-        
-        for i, chunk in enumerate(chunks2):
-            chunks_by_chapter2[chunk.chapter].append((i, chunk, embeddings2[i] if i < len(embeddings2) else None))
-        
-        # 对每个章节进行对齐
-        all_chapters = set(chunks_by_chapter1.keys()) | set(chunks_by_chapter2.keys())
-        
-        for chapter in all_chapters:
-            ch_chunks1 = chunks_by_chapter1.get(chapter, [])
-            ch_chunks2 = chunks_by_chapter2.get(chapter, [])
-            
-            # 按位置比例对齐
-            len1 = len(ch_chunks1)
-            len2 = len(ch_chunks2)
-            
-            i, j = 0, 0
-            while i < len1 or j < len2:
-                if i >= len1:
-                    _, chunk2, emb2 = ch_chunks2[j]
-                    aligned.append((type('obj', (object,), {'text': ''})(), chunk2, None, emb2))
-                    j += 1
-                elif j >= len2:
-                    _, chunk1, emb1 = ch_chunks1[i]
-                    aligned.append((chunk1, None, emb1, None))
-                    i += 1
-                else:
-                    _, chunk1, emb1 = ch_chunks1[i]
-                    _, chunk2, emb2 = ch_chunks2[j]
-                    aligned.append((chunk1, chunk2, emb1, emb2))
-                    i += 1
-                    j += 1
-        
-        return aligned
